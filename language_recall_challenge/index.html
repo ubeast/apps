@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spanish Sprint - Professional Edition</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --success: #22c55e; 
+            --error: #ef4444;   
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #app {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 850px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+            position: relative;
+        }
+
+        #active-topic-header {
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #0f172a;
+            background: var(--accent);
+            margin: -2.5rem -2.5rem 1.5rem -2.5rem;
+            padding: 12px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .exit-btn {
+            position: absolute;
+            right: 15px;
+            background: rgba(0,0,0,0.2);
+            color: #0f172a;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .file-controls { display: flex; gap: 10px; margin-bottom: 1rem; justify-content: center; }
+        select, input[type="text"] {
+            padding: 10px; background: #0f172a; border: 1px solid #475569;
+            color: white; border-radius: 8px; outline: none;
+        }
+
+        textarea {
+            width: 100%; height: 250px; background: #0f172a; color: var(--text-main);
+            border: 1px solid #334155; border-radius: 12px; padding: 15px; font-size: 1rem;
+            resize: none; font-family: monospace;
+        }
+
+        #feedback-banner {
+            position: absolute;
+            top: 45px; left: 0; right: 0;
+            padding: 12px; font-weight: 900; display: none; text-transform: uppercase; z-index: 10;
+        }
+        #feedback-banner.correct { display: block; background: var(--success); color: white; }
+        #feedback-banner.wrong { display: block; background: var(--error); color: white; }
+
+        .settings-row { 
+            margin-bottom: 1.5rem; 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            align-items: center;
+            background: rgba(0,0,0,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            background: #334155; border: none; color: var(--text-dim); padding: 10px 16px;
+            border-radius: 8px; cursor: pointer; font-weight: 600;
+        }
+        .mode-btn.active { background: var(--accent); color: #0f172a; }
+
+        .toggle-container { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 0.8rem; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #timer { font-size: 3.5rem; font-weight: 800; color: var(--accent); }
+        #score-display { font-size: 1.5rem; font-weight: 800; color: var(--accent); margin-top: 5px; }
+
+        .display-area { min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .flag-row { font-size: 3rem; margin-bottom: 10px; }
+        
+        #display-text { font-size: 2.5rem; font-weight: 800; margin: 5px 0; line-height: 1.2; }
+        #display-text.error-text { color: var(--error) !important; }
+        #display-text.invisible-text { visibility: hidden; }
+
+        #answer-reveal { font-size: 1.5rem; font-weight: 700; color: var(--success); min-height: 1.8rem; margin-top: 10px; }
+
+        input#user-input {
+            width: 100%; padding: 18px; background: #0f172a; border: 2px solid #475569;
+            border-radius: 12px; color: white; font-size: 1.5rem; text-align: center; outline: none;
+        }
+
+        .hidden { display: none !important; }
+        .btn { padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; font-weight: bold; }
+        .btn-primary { background: var(--accent); color: #0f172a; width: 100%; padding: 18px; font-size: 1.2rem; }
+        .btn-danger { background: var(--error); color: white; }
+        .btn-save { background: var(--success); color: white; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="feedback-banner"></div>
+
+    <div id="setup-view">
+        <h2 id="ui-manager-title" style="margin-top:0">Topic Manager</h2>
+        
+        <div class="file-controls">
+            <select id="topic-dropdown" onchange="engine.loadSelectedTopic()"></select>
+            <input type="text" id="new-topic-name" placeholder="New Topic Name...">
+            <button id="ui-save-btn" class="btn btn-save" onclick="engine.saveTopic()">Save/Update</button>
+            <button id="ui-delete-btn" class="btn btn-danger" onclick="engine.deleteTopic()">Delete</button>
+        </div>
+        
+        <div class="editor-container">
+            <textarea id="text-editor" placeholder="English | Spanish"></textarea>
+        </div>
+
+        <div class="settings-row">
+            <div class="toggle-container" style="background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px;">
+                <span id="ui-label-lang">UI</span>
+                <select id="ui-lang-select" onchange="engine.setUILanguage(this.value)">
+                    <option value="en">EN</option>
+                    <option value="es">ES</option>
+                </select>
+            </div>
+
+            <div class="mode-selector">
+                <button id="ui-mode-random" class="mode-btn" onclick="engine.setMode('random', this)">Random</button>
+                <button id="ui-mode-en" class="mode-btn" onclick="engine.setMode('en', this)">EN Prompts</button>
+                <button id="default-mode" class="mode-btn active" onclick="engine.setMode('es', this)">ES Prompts</button>
+            </div>
+            
+            <div class="toggle-container">
+                <span id="ui-label-timer">TIMER</span>
+                <label class="switch">
+                    <input type="checkbox" id="timer-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-container">
+                <span id="ui-label-audio">AUDIO ONLY</span>
+                <label class="switch">
+                    <input type="checkbox" id="audio-only-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <button id="ui-start-btn" class="btn btn-primary" onclick="engine.init()">Start Sprint</button>
+    </div>
+
+    <div id="quiz-view" class="hidden">
+        <div id="active-topic-header">
+            <span id="header-text"></span>
+            <button id="ui-exit-btn" class="exit-btn" onclick="engine.finish()">Quit & Results [ESC]</button>
+        </div>
+        <div id="score-display">Score: 0</div>
+        <div id="timer">60</div>
+        <div class="display-area">
+            <div id="flag-display" class="flag-row"></div>
+            <div id="prompt-label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--accent); font-weight: 700;"></div>
+            <div id="display-text"></div>
+            <div id="answer-reveal"></div>
+        </div>
+        <input type="text" id="user-input" placeholder="Type translation..." autocomplete="off" spellcheck="false">
+    </div>
+
+    <div id="result-view" class="hidden">
+        <div id="result-topic-header" style="font-size: 1rem; font-weight: 800; color: var(--accent); margin-bottom: 10px;"></div>
+        <h2 id="ui-result-title">Performance Audit</h2>
+        <div id="audit-stats" style="margin: 1rem 0; font-weight: bold; font-size: 1.2rem;"></div>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
+            <table style="width:100%; border-collapse: collapse; text-align: left; background: #0f172a; font-size: 0.85rem;">
+                <thead style="background:#334155; color:var(--accent); position:sticky; top:0;">
+                    <tr>
+                        <th id="ui-th-en" style="padding:10px;">English</th>
+                        <th id="ui-th-es" style="padding:10px;">Spanish</th>
+                        <th id="ui-th-right" style="padding:10px; text-align:center;">✓ Right</th>
+                        <th id="ui-th-wrong" style="padding:10px; text-align:center;">✘ Wrong</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+        <button id="ui-return-btn" onclick="location.reload()" class="btn btn-primary" style="margin-top:20px;">Return to Manager</button>
+    </div>
+</div>
+
+<script>
+/**
+ * MICHAEL SCHERTZ ENGINEERING STANDARDS
+ * UI Translation Dictionary
+ */
+const UI_STRINGS = {
+    en: {
+        managerTitle: "Topic Manager",
+        saveBtn: "Save/Update",
+        deleteBtn: "Delete",
+        random: "Random",
+        enPrompts: "EN Prompts",
+        esPrompts: "ES Prompts",
+        timer: "TIMER",
+        audioOnly: "AUDIO ONLY",
+        startBtn: "Start Sprint",
+        exitBtn: "Quit & Results [ESC]",
+        score: "Score",
+        inputPlaceholder: "Type translation...",
+        newTopicPlaceholder: "New Topic Name...",
+        resultTitle: "Performance Audit",
+        thEn: "English",
+        thEs: "Spanish",
+        thRight: "✓ Right",
+        thWrong: "✘ Wrong",
+        returnBtn: "Return to Manager",
+        correct: "✅ CORRECT",
+        wrong: "❌ WRONG",
+        finalScore: "Final Score",
+        to: "To"
+    },
+    es: {
+        managerTitle: "Gestor de Temas",
+        saveBtn: "Guardar/Actualizar",
+        deleteBtn: "Eliminar",
+        random: "Aleatorio",
+        enPrompts: "Preguntas EN",
+        esPrompts: "Preguntas ES",
+        timer: "TEMPORIZADOR",
+        audioOnly: "SOLO AUDIO",
+        startBtn: "Iniciar Sprint",
+        exitBtn: "Salir y Resultados [ESC]",
+        score: "Puntaje",
+        inputPlaceholder: "Escriba la traducción...",
+        newTopicPlaceholder: "Nuevo nombre del tema...",
+        resultTitle: "Auditoría de Desempeño",
+        thEn: "Inglés",
+        thEs: "Español",
+        thRight: "✓ Correcto",
+        thWrong: "✘ Incorrecto",
+        returnBtn: "Volver al Gestor",
+        correct: "✅ CORRECTO",
+        wrong: "❌ INCORRECTO",
+        finalScore: "Puntaje Final",
+        to: "A"
+    }
+};
+
+const engine = {
+    uiLang: 'en',
+    mode: 'es',
+    timerEnabled: false,
+    audioOnly: false,
+    score: 0,
+    history: [],
+    pool: [],
+    activeData: [],
+    isWaiting: false,
+    storageKey: 'MS_Language_Topics', // Restored original key
+    activeTopicName: '',
+    interval: null,
+    audioCtx: null,
+
+    normalize: (str) => {
+        return str.toLowerCase()
+            .trim()
+            .replace(/[¿?!¡.,'’]/g, "")
+            .replace(/\bits\b/g, "it is")
+            .replace(/\bim\b/g, "i am")
+            .replace(/\bdont\b/g, "do not");
+    },
+
+    playBuzzer() {
+        if (!this.audioCtx) return;
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        const o1 = this.audioCtx.createOscillator(), o2 = this.audioCtx.createOscillator(), g = this.audioCtx.createGain();
+        o1.type = 'sawtooth'; o2.type = 'sawtooth';
+        o1.frequency.setValueAtTime(110, this.audioCtx.currentTime); o2.frequency.setValueAtTime(114, this.audioCtx.currentTime);
+        g.gain.setValueAtTime(0.2, this.audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.8);
+        o1.connect(g); o2.connect(g); g.connect(this.audioCtx.destination);
+        o1.start(); o2.start(); o1.stop(this.audioCtx.currentTime + 0.8); o2.stop(this.audioCtx.currentTime + 0.8);
+    },
+
+    getLibrary() {
+        const stored = localStorage.getItem(this.storageKey);
+        // Restored original default topic
+        return stored ? JSON.parse(stored) : { "General": "I am hungry | Tengo hambre" };
+    },
+
+    updateDropdown() {
+        const library = this.getLibrary();
+        const dropdown = document.getElementById('topic-dropdown');
+        dropdown.innerHTML = Object.keys(library).map(name => `<option value="${name}">${name}</option>`).join('');
+        this.loadSelectedTopic();
+    },
+
+    loadSelectedTopic() {
+        const library = this.getLibrary();
+        const selected = document.getElementById('topic-dropdown').value;
+        if (selected) {
+            document.getElementById('text-editor').value = library[selected];
+            document.getElementById('new-topic-name').value = selected;
+        }
+    },
+
+    saveTopic() {
+        const name = document.getElementById('new-topic-name').value.trim();
+        const content = document.getElementById('text-editor').value.trim();
+        if (!name || !content) return;
+        const library = this.getLibrary();
+        library[name] = content;
+        localStorage.setItem(this.storageKey, JSON.stringify(library));
+        this.updateDropdown();
+        document.getElementById('topic-dropdown').value = name;
+    },
+
+    deleteTopic() {
+        const name = document.getElementById('topic-dropdown').value;
+        if (!name || !confirm(`Delete ${name}?`)) return;
+        const library = this.getLibrary();
+        delete library[name];
+        localStorage.setItem(this.storageKey, JSON.stringify(library));
+        this.updateDropdown();
+    },
+
+    setMode(m, btn) {
+        this.mode = m;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    },
+
+    setUILanguage(lang) {
+        this.uiLang = lang;
+        const s = UI_STRINGS[lang];
+        document.getElementById('ui-manager-title').innerText = s.managerTitle;
+        document.getElementById('ui-save-btn').innerText = s.saveBtn;
+        document.getElementById('ui-delete-btn').innerText = s.deleteBtn;
+        document.getElementById('ui-mode-random').innerText = s.random;
+        document.getElementById('ui-mode-en').innerText = s.enPrompts;
+        document.getElementById('default-mode').innerText = s.esPrompts;
+        document.getElementById('ui-label-timer').innerText = s.timer;
+        document.getElementById('ui-label-audio').innerText = s.audioOnly;
+        document.getElementById('ui-start-btn').innerText = s.startBtn;
+        document.getElementById('ui-exit-btn').innerText = s.exitBtn;
+        document.getElementById('ui-result-title').innerText = s.resultTitle;
+        document.getElementById('ui-th-en').innerText = s.thEn;
+        document.getElementById('ui-th-es').innerText = s.thEs;
+        document.getElementById('ui-th-right').innerText = s.thRight;
+        document.getElementById('ui-th-wrong').innerText = s.thWrong;
+        document.getElementById('ui-return-btn').innerText = s.returnBtn;
+        document.getElementById('user-input').placeholder = s.inputPlaceholder;
+        this.updateScoreUI();
+    },
+
+    updateScoreUI() {
+        document.getElementById('score-display').innerText = `${UI_STRINGS[this.uiLang].score}: ${this.score}`;
+    },
+
+    requestFullScreen() {
+        // Updated Fullscreen Logic for Cross-Browser (Win/Mac) support
+        const docEl = document.documentElement;
+        const fn = docEl.requestFullscreen || docEl.webkitRequestFullScreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+        if (fn) fn.call(docEl).catch(() => {});
+    },
+
+    init() {
+        this.requestFullScreen();
+        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.timerEnabled = document.getElementById('timer-toggle').checked;
+        this.audioOnly = document.getElementById('audio-only-toggle').checked;
+        this.score = 0; this.history = []; this.timeLeft = 60;
+        this.updateScoreUI();
+        const raw = document.getElementById('text-editor').value;
+        this.activeTopicName = document.getElementById('topic-dropdown').value || "Manual Entry";
+        this.activeData = raw.split('\n').filter(l => l.includes('|')).map(l => {
+            const p = l.split('|');
+            return { en: p[0].trim(), es: p[1].trim(), correctCount: 0, wrongCount: 0 };
+        });
+        if (this.activeData.length === 0) return;
+        this.pool = this.shuffle([...this.activeData]);
+        document.getElementById('setup-view').classList.add('hidden');
+        document.getElementById('quiz-view').classList.remove('hidden');
+        document.getElementById('header-text').innerText = this.activeTopicName;
+        if (this.timerEnabled) { document.getElementById('timer').classList.remove('hidden'); this.startTimer(); }
+        else { document.getElementById('timer').classList.add('hidden'); }
+        this.newQ();
+        const input = document.getElementById('user-input');
+        input.focus();
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.finish();
+            if (e.key === 'Enter') this.isWaiting ? this.newQ() : this.check();
+        });
+    },
+
+    shuffle(arr) {
+        const newArr = [...arr];
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+        }
+        return newArr;
+    },
+
+    startTimer() {
+        if (this.interval) clearInterval(this.interval);
+        this.interval = setInterval(() => {
+            this.timeLeft--; document.getElementById('timer').innerText = this.timeLeft;
+            if (this.timeLeft <= 0) this.finish();
+        }, 1000);
+    },
+
+    newQ() {
+        this.isWaiting = false;
+        if (this.pool.length === 0) this.pool = this.shuffle([...this.activeData]);
+        this.curr = this.pool.pop();
+        const disp = document.getElementById('display-text');
+        disp.className = this.audioOnly ? 'invisible-text' : ''; 
+        document.getElementById('user-input').value = '';
+        document.getElementById('feedback-banner').className = '';
+        document.getElementById('answer-reveal').innerText = '';
+        const dir = this.mode === 'random' ? (Math.random() > 0.5 ? 'en' : 'es') : this.mode;
+        this.pLang = dir; this.tLang = dir === 'en' ? 'es' : 'en';
+        document.getElementById('flag-display').innerText = this.pLang === 'en' ? "🇺🇸 → 🇪🇸" : "🇪🇸 → 🇺🇸";
+        document.getElementById('prompt-label').innerText = `${UI_STRINGS[this.uiLang].to} ${this.tLang === 'es' ? UI_STRINGS[this.uiLang].thEs : UI_STRINGS[this.uiLang].thEn}`;
+        disp.innerText = this.curr[this.pLang];
+        this.speak(this.curr[this.pLang], this.pLang);
+    },
+
+    check() {
+        this.isWaiting = true;
+        const normalizedInput = this.normalize(document.getElementById('user-input').value);
+        const normalizedTarget = this.normalize(this.curr[this.tLang]);
+        const isCorrect = normalizedInput === normalizedTarget;
+        document.getElementById('display-text').classList.remove('invisible-text');
+        document.getElementById('answer-reveal').innerText = this.curr[this.tLang];
+        const banner = document.getElementById('feedback-banner');
+        banner.innerText = isCorrect ? UI_STRINGS[this.uiLang].correct : UI_STRINGS[this.uiLang].wrong;
+        banner.className = isCorrect ? "correct" : "wrong";
+        if (isCorrect) { this.score += 10; this.curr.correctCount++; }
+        else { this.score = Math.max(0, this.score - 5); document.getElementById('display-text').classList.add('error-text'); this.curr.wrongCount++; this.playBuzzer(); }
+        this.updateScoreUI();
+        this.speak(this.curr[this.tLang], this.tLang);
+    },
+
+    speak(txt, langCode) {
+        if (!txt) return; window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(txt);
+        
+        // Robust Windows/Mac voice detection
+        const voices = window.speechSynthesis.getVoices();
+        const langTarget = langCode === 'es' ? 'es-CO' : 'en-US';
+        
+        // Find best match: Perfect locale match first, then language prefix
+        let voice = voices.find(v => v.lang === langTarget) || voices.find(v => v.lang.startsWith(langCode));
+        if (voice) u.voice = voice;
+        
+        u.lang = langTarget;
+        u.rate = 0.85;
+        window.speechSynthesis.speak(u);
+    },
+
+    finish() {
+        if (this.interval) clearInterval(this.interval);
+        const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+        if (exitFn) exitFn.call(document).catch(() => {});
+        
+        document.getElementById('quiz-view').classList.add('hidden');
+        document.getElementById('result-view').classList.remove('hidden');
+        document.getElementById('result-topic-header').innerText = `Results: ${this.activeTopicName}`;
+        const totalR = this.activeData.reduce((sum, item) => sum + item.correctCount, 0);
+        const totalW = this.activeData.reduce((sum, item) => sum + item.wrongCount, 0);
+        document.getElementById('audit-stats').innerHTML = `${UI_STRINGS[this.uiLang].finalScore}: ${this.score} | ${UI_STRINGS[this.uiLang].thRight}: <span style="color:var(--success)">${totalR}</span> | ${UI_STRINGS[this.uiLang].thWrong}: <span style="color:var(--error)">${totalW}</span>`;
+        document.getElementById('results-body').innerHTML = this.activeData.map(item => `<tr style="border-bottom: 1px solid #334155;"><td style="padding:12px;">${item.en}</td><td style="padding:12px;">${item.es}</td><td style="padding:12px; text-align:center; color:var(--success); font-weight:bold;">${item.correctCount}</td><td style="padding:12px; text-align:center; color:var(--error); font-weight:bold;">${item.wrongCount}</td></tr>`).join('');
+    }
+};
+
+window.onload = () => {
+    // Prime voices for Mac/Windows cross-loading
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+    }
+    engine.updateDropdown();
+    engine.setUILanguage('en');
+};
+</script>
+</body>
+</html>
