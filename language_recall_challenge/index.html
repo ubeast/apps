@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spanish Sprint - Professional Edition</title>
+    <title>Language Recall Challenge</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -232,9 +232,48 @@
 
 <script>
 /**
- * MICHAEL SCHERTZ ENGINEERING STANDARDS
- * UI Translation Dictionary
+ * DEFAULT DATASETS
+ * Pre-loaded topics to ensure the app is functional upon first launch.
  */
+const DEFAULT_DATASETS = {
+    "Family & Home": 
+        "How did you sleep? | ¿Cómo amaneciste?\n" +
+        "Did you eat already? | ¿Ya almorzaste?\n" +
+        "I missed you a lot | Te extrañé mucho\n" +
+        "Give me a kiss | Dame un beso\n" +
+        "I am proud of you | Estoy orgulloso de ti\n" +
+        "How was your day? | ¿Cómo te fue hoy?",
+    
+    "Medical & Forensic": 
+        "Where does it hurt? | ¿Dónde le duele?\n" +
+        "Do you have any allergies? | ¿Tiene alguna alergia?\n" +
+        "I need a medical history | Necesito una historia médica\n" +
+        "The patient is stable | El paciente está estable\n" +
+        "Cause of death | Causa de la muerte\n" +
+        "Laboratory results | Resultados de laboratorio",
+    
+    "Education & Teaching": 
+        "Open your books to page ten | Abran sus libros en la página diez\n" +
+        "Do you have any questions? | ¿Tienen alguna pregunta?\n" +
+        "Please repeat after me | Por favor repitan después de mí\n" +
+        "Hand in your homework | Entreguen su tarea\n" +
+        "Good job today | Buen trabajo hoy",
+    
+    "Driving & Directions": 
+        "Turn right at the light | Gire a la derecha en el semáforo\n" +
+        "Stop at the corner | Pare en la esquina\n" +
+        "Go straight for two blocks | Siga derecho por dos cuadras\n" +
+        "Slow down | Reduzca la velocidad\n" +
+        "Where is the gas station? | ¿Dónde está la gasolinera?",
+
+    "Restaurant & Dining": 
+        "The check, please | La cuenta, por favor\n" +
+        "Everything was delicious | Todo estuvo delicioso\n" +
+        "I would like to order | Me gustaría pedir\n" +
+        "A table for two | Una mesa para dos\n" +
+        "Is it spicy? | ¿Es picante?"
+};
+
 const UI_STRINGS = {
     en: {
         managerTitle: "Topic Manager",
@@ -298,7 +337,7 @@ const engine = {
     pool: [],
     activeData: [],
     isWaiting: false,
-    storageKey: 'MS_Language_Topics', // Restored original key
+    storageKey: 'MS_Language_Topics_PRO',
     activeTopicName: '',
     interval: null,
     audioCtx: null,
@@ -307,9 +346,18 @@ const engine = {
         return str.toLowerCase()
             .trim()
             .replace(/[¿?!¡.,'’]/g, "")
+            .replace(/\blets\b/g, "lets")
+            .replace(/\blet's\b/g, "lets")
+            .replace(/\blet’s\b/g, "lets")
             .replace(/\bits\b/g, "it is")
+            .replace(/\bit's\b/g, "it is")
+            .replace(/\bit’s\b/g, "it is")
             .replace(/\bim\b/g, "i am")
-            .replace(/\bdont\b/g, "do not");
+            .replace(/\bi'm\b/g, "i am")
+            .replace(/\bi’m\b/g, "i am")
+            .replace(/\bdont\b/g, "do not")
+            .replace(/\bdon't\b/g, "do not")
+            .replace(/\bdon’t\b/g, "do not");
     },
 
     playBuzzer() {
@@ -325,8 +373,8 @@ const engine = {
 
     getLibrary() {
         const stored = localStorage.getItem(this.storageKey);
-        // Restored original default topic
-        return stored ? JSON.parse(stored) : { "General": "I am hungry | Tengo hambre" };
+        if (stored) return JSON.parse(stored);
+        return DEFAULT_DATASETS;
     },
 
     updateDropdown() {
@@ -399,7 +447,6 @@ const engine = {
     },
 
     requestFullScreen() {
-        // Updated Fullscreen Logic for Cross-Browser (Win/Mac) support
         const docEl = document.documentElement;
         const fn = docEl.requestFullscreen || docEl.webkitRequestFullScreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
         if (fn) fn.call(docEl).catch(() => {});
@@ -408,6 +455,8 @@ const engine = {
     init() {
         this.requestFullScreen();
         if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
         this.timerEnabled = document.getElementById('timer-toggle').checked;
         this.audioOnly = document.getElementById('audio-only-toggle').checked;
         this.score = 0; this.history = []; this.timeLeft = 60;
@@ -473,10 +522,12 @@ const engine = {
         const normalizedInput = this.normalize(document.getElementById('user-input').value);
         const normalizedTarget = this.normalize(this.curr[this.tLang]);
         const isCorrect = normalizedInput === normalizedTarget;
+        const s = UI_STRINGS[this.uiLang];
+        
         document.getElementById('display-text').classList.remove('invisible-text');
         document.getElementById('answer-reveal').innerText = this.curr[this.tLang];
         const banner = document.getElementById('feedback-banner');
-        banner.innerText = isCorrect ? UI_STRINGS[this.uiLang].correct : UI_STRINGS[this.uiLang].wrong;
+        banner.innerText = isCorrect ? s.correct : s.wrong;
         banner.className = isCorrect ? "correct" : "wrong";
         if (isCorrect) { this.score += 10; this.curr.correctCount++; }
         else { this.score = Math.max(0, this.score - 5); document.getElementById('display-text').classList.add('error-text'); this.curr.wrongCount++; this.playBuzzer(); }
@@ -487,16 +538,11 @@ const engine = {
     speak(txt, langCode) {
         if (!txt) return; window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(txt);
-        
-        // Robust Windows/Mac voice detection
         const voices = window.speechSynthesis.getVoices();
-        const langTarget = langCode === 'es' ? 'es-CO' : 'en-US';
-        
-        // Find best match: Perfect locale match first, then language prefix
-        let voice = voices.find(v => v.lang === langTarget) || voices.find(v => v.lang.startsWith(langCode));
+        const targetLocale = langCode === 'es' ? 'es-CO' : 'en-US';
+        let voice = voices.find(v => v.lang === targetLocale) || voices.find(v => v.lang.startsWith(langCode));
         if (voice) u.voice = voice;
-        
-        u.lang = langTarget;
+        u.lang = targetLocale;
         u.rate = 0.85;
         window.speechSynthesis.speak(u);
     },
@@ -505,19 +551,18 @@ const engine = {
         if (this.interval) clearInterval(this.interval);
         const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
         if (exitFn) exitFn.call(document).catch(() => {});
-        
         document.getElementById('quiz-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
         document.getElementById('result-topic-header').innerText = `Results: ${this.activeTopicName}`;
         const totalR = this.activeData.reduce((sum, item) => sum + item.correctCount, 0);
         const totalW = this.activeData.reduce((sum, item) => sum + item.wrongCount, 0);
-        document.getElementById('audit-stats').innerHTML = `${UI_STRINGS[this.uiLang].finalScore}: ${this.score} | ${UI_STRINGS[this.uiLang].thRight}: <span style="color:var(--success)">${totalR}</span> | ${UI_STRINGS[this.uiLang].thWrong}: <span style="color:var(--error)">${totalW}</span>`;
+        const s = UI_STRINGS[this.uiLang];
+        document.getElementById('audit-stats').innerHTML = `${s.finalScore}: ${this.score} | ${s.thRight}: <span style="color:var(--success)">${totalR}</span> | ${s.thWrong}: <span style="color:var(--error)">${totalW}</span>`;
         document.getElementById('results-body').innerHTML = this.activeData.map(item => `<tr style="border-bottom: 1px solid #334155;"><td style="padding:12px;">${item.en}</td><td style="padding:12px;">${item.es}</td><td style="padding:12px; text-align:center; color:var(--success); font-weight:bold;">${item.correctCount}</td><td style="padding:12px; text-align:center; color:var(--error); font-weight:bold;">${item.wrongCount}</td></tr>`).join('');
     }
 };
 
 window.onload = () => {
-    // Prime voices for Mac/Windows cross-loading
     if ('speechSynthesis' in window) {
         window.speechSynthesis.getVoices();
         if (speechSynthesis.onvoiceschanged !== undefined) {
