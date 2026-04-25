@@ -14,7 +14,7 @@ body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:var(--bg)
 @media(max-width:600px){
   body{padding:0}
   #app{border-radius:0;padding:1rem;min-height:100vh}
-  #active-topic-header{margin:-1rem -1rem 1rem -1rem;border-radius:0;font-size:.75rem;letter-spacing:1px;padding:10px 12px}
+  #active-topic-header,#review-topic-header{margin:-1rem -1rem 1rem -1rem;border-radius:0;font-size:.75rem;letter-spacing:1px;padding:10px 12px}
   .hdr-btns{gap:4px}
   .exit-btn,.pause-btn{font-size:.62rem;padding:4px 7px}
   #display-text{font-size:1.4rem}
@@ -48,7 +48,7 @@ body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:var(--bg)
 }
 
 /* TOPIC HEADER */
-#active-topic-header{font-size:.9rem;font-weight:800;text-transform:uppercase;letter-spacing:3px;color:#0f172a;background:var(--acc);margin:-2.5rem -2.5rem 1.5rem -2.5rem;padding:12px 16px;border-radius:20px 20px 0 0;display:flex;justify-content:center;align-items:center;position:relative;gap:8px}
+#active-topic-header,#review-topic-header{font-size:.9rem;font-weight:800;text-transform:uppercase;letter-spacing:3px;color:#0f172a;background:var(--acc);margin:-2.5rem -2.5rem 1.5rem -2.5rem;padding:12px 16px;border-radius:20px 20px 0 0;display:flex;justify-content:center;align-items:center;position:relative;gap:8px}
 .hdr-btns{position:absolute;right:12px;display:flex;gap:6px}
 .exit-btn{background:rgba(0,0,0,.2);color:#0f172a;border:none;padding:5px 10px;border-radius:6px;font-size:.68rem;font-weight:900;cursor:pointer;text-transform:uppercase}
 .pause-btn{background:rgba(0,0,0,.15);color:#0f172a;border:none;padding:5px 10px;border-radius:6px;font-size:.68rem;font-weight:900;cursor:pointer;text-transform:uppercase}
@@ -252,7 +252,7 @@ tbody tr:hover td{background:#1e293b}
 
 <!-- ═══ REVIEW ═══ -->
 <div id="review-view" class="hidden">
-  <div id="active-topic-header" style="margin:-2.5rem -2.5rem 1.5rem -2.5rem;border-radius:20px 20px 0 0">
+  <div id="review-topic-header" style="margin:-2.5rem -2.5rem 1.5rem -2.5rem;border-radius:20px 20px 0 0">
     <span>Review — Missed Phrases</span>
     <div class="hdr-btns"><button class="exit-btn" onclick="engine.returnToManager()">Done</button></div>
   </div>
@@ -374,6 +374,10 @@ const UI={
   es:{managerTitle:"Gestor de Temas",saveBtn:"Guardar/Actualizar",deleteBtn:"Eliminar",random:"Aleatorio",enPrompts:"Preguntas EN",esPrompts:"Preguntas ES",timer:"TEMPORIZADOR",audioOnly:"SOLO AUDIO",startBtn:"Iniciar Sprint",exitBtn:"Salir [ESC]",score:"Puntaje",inputPlaceholder:"Escriba la traducción...",newTopicPlaceholder:"Nuevo nombre...",resultTitle:"Auditoría de Desempeño",thEn:"Inglés",thEs:"Español",thRight:"✓ Correcto",thWrong:"✘ Incorrecto",returnBtn:"Volver al Gestor",correct:"✅ CORRECTO",wrong:"❌ INCORRECTO",finalScore:"Puntaje Final",to:"A"}
 };
 
+function esc(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 const engine={
   uiLang:'en',mode:'es',timerEnabled:false,audioOnly:false,
   score:0,streak:0,bestStreak:0,totalRight:0,totalWrong:0,
@@ -385,7 +389,7 @@ const engine={
   norm(str){
     return str.toLowerCase().trim()
       .replace(/[¿?!¡.,'']/g,"")
-      .replace(/\blet's\b|\blets\b/g,"lets")
+      .replace(/\blet's\b|\blets\b/g,"let us")
       .replace(/\bit's\b|\bits\b/g,"it is")
       .replace(/\bi'm\b|\bim\b/g,"i am")
       .replace(/\bdon't\b|\bdont\b/g,"do not");
@@ -425,7 +429,12 @@ const engine={
   updateDropdown(){
     const lib=this.getLibrary();
     const dd=document.getElementById('topic-dropdown');
-    dd.innerHTML=Object.keys(lib).map(n=>`<option value="${n}">${n}</option>`).join('');
+    dd.innerHTML='';
+    Object.keys(lib).forEach(n=>{
+      const opt=document.createElement('option');
+      opt.value=n;opt.textContent=n;
+      dd.appendChild(opt);
+    });
     this.loadSelectedTopic();
   },
 
@@ -532,6 +541,17 @@ const engine={
     this.pool=this.buildPool();
     this.show('quiz-view');
     document.getElementById('header-text').innerText=this.activeTopicName;
+    this.startTimer();
+    this.newQ();
+    const inp=document.getElementById('user-input');
+    inp.focus();
+    inp.onkeydown=e=>{
+      if(this.paused)return;
+      if(e.key==='Enter'){e.preventDefault();this.isWaiting?this.newQ():this.check();}
+    };
+  },
+
+  startTimer(){
     const timerEl=document.getElementById('timer');
     if(this.timerEnabled){
       timerEl.classList.remove('hidden');timerEl.innerText=60;timerEl.className='';
@@ -543,13 +563,6 @@ const engine={
         if(this.timeLeft<=0)this.finish();
       },1000);
     }else{timerEl.classList.add('hidden');}
-    this.newQ();
-    const inp=document.getElementById('user-input');
-    inp.focus();
-    inp.onkeydown=e=>{
-      if(this.paused)return;
-      if(e.key==='Enter'){e.preventDefault();this.isWaiting?this.newQ():this.check();}
-    };
   },
 
   buildPool(){
@@ -692,7 +705,7 @@ const engine={
     document.getElementById('ui-review-btn').classList.toggle('hidden',this.missedPhrases.length===0);
     document.getElementById('results-body').innerHTML=this.activeData.map(item=>`
       <tr class="${item.wrongCount>item.correctCount&&item.wrongCount>0?'missed-row':''}">
-        <td>${item.en}</td><td>${item.es}</td>
+        <td>${esc(item.en)}</td><td>${esc(item.es)}</td>
         <td style="text-align:center;color:var(--ok);font-weight:bold">${item.correctCount}</td>
         <td style="text-align:center;color:var(--err);font-weight:bold">${item.wrongCount}</td>
       </tr>`).join('');
@@ -706,17 +719,7 @@ const engine={
     this.seen=0;this.missedPhrases=[];this.isWaiting=false;this.paused=false;
     this.activeTopicName='Missed Phrases Review';
     this.timeLeft=60;
-    const timerEl=document.getElementById('timer');
-    if(this.timerEnabled){
-      timerEl.classList.remove('hidden');timerEl.innerText=60;timerEl.className='';
-      if(this.interval)clearInterval(this.interval);
-      this.interval=setInterval(()=>{
-        if(this.paused)return;
-        this.timeLeft--;timerEl.innerText=this.timeLeft;
-        if(this.timeLeft<=10)timerEl.className='warn';
-        if(this.timeLeft<=0)this.finish();
-      },1000);
-    }else{timerEl.classList.add('hidden');}
+    this.startTimer();
     this.show('quiz-view');
     document.getElementById('header-text').innerText=this.activeTopicName;
     document.getElementById('feedback-banner').className='';
